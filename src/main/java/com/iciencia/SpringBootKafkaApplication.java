@@ -10,6 +10,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.config.KafkaListenerEndpoint;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.KafkaProducerException;
 import org.springframework.kafka.core.KafkaSendCallback;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -24,15 +26,24 @@ public class SpringBootKafkaApplication implements CommandLineRunner {
 	@Autowired
 	private KafkaTemplate<String, String> kafkaTemplate;
 
+	@Autowired
+	private KafkaListenerEndpointRegistry registryKafka;
+
 	// ****
 	// **** ACCESO A LA INFORMACION COMPLETA
-	@KafkaListener(topics = "TutorialTopic", containerFactory = "kafkaListenerContainerFactory", groupId = "iciencia-group", properties = {
+	// Se define la propiedad para poder contrar la ejecucion del listener. Pausar y
+	// renudar el consumo. id="culquierId", autoStartup = "false"
+	// para esto se debe definir una clase tipo KafkaListenerEndpointRegistry y
+	// posterior llamar desde registryKafka.getListenerContainer("cualquierId");
+
+	@KafkaListener(id = "cualquierId", autoStartup = "false", topics = "TutorialTopic", containerFactory = "kafkaListenerContainerFactory", groupId = "iciencia-group", properties = {
 			"max.poll.interval.ms:4000", "max.poll.records:10" })
 	public void listen(List<ConsumerRecord<String, String>> messages) {
 		log.info("Inicio de captura de mensaje completo");
 
 		for (ConsumerRecord<String, String> consumerRecord : messages) {
-			log.info("Partition = {}, Offset = {}, Key ={}, Value = {}",consumerRecord.partition(),consumerRecord.offset(), consumerRecord.key(), consumerRecord.value());
+			log.info("Partition = {}, Offset = {}, Key ={}, Value = {}", consumerRecord.partition(),
+					consumerRecord.offset(), consumerRecord.key(), consumerRecord.value());
 		}
 
 		log.info("Bath complete");
@@ -75,7 +86,7 @@ public class SpringBootKafkaApplication implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		for (int i = 0; i < 100; i++) {
 
-			ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send("TutorialTopic",String.valueOf(i),
+			ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send("TutorialTopic", String.valueOf(i),
 					String.format(" SMS generado numero %d", i));
 			future.addCallback(new KafkaSendCallback<String, String>() {
 
@@ -95,5 +106,7 @@ public class SpringBootKafkaApplication implements CommandLineRunner {
 				}
 			});
 		}
+		Thread.sleep(5000);
+		registryKafka.getListenerContainer("cualquierId").start();
 	}
 }
