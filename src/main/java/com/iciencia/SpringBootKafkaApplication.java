@@ -1,8 +1,8 @@
 package com.iciencia;
 
-import java.util.Iterator;
 import java.util.List;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,28 +24,43 @@ public class SpringBootKafkaApplication implements CommandLineRunner {
 	@Autowired
 	private KafkaTemplate<String, String> kafkaTemplate;
 
+	// ****
+	// **** ACCESO A LA INFORMACION COMPLETA
+	@KafkaListener(topics = "TutorialTopic", containerFactory = "kafkaListenerContainerFactory", groupId = "iciencia-group", properties = {
+			"max.poll.interval.ms:4000", "max.poll.records:10" })
+	public void listen(List<ConsumerRecord<String, String>> messages) {
+		log.info("Inicio de captura de mensaje completo");
+
+		for (ConsumerRecord<String, String> consumerRecord : messages) {
+			log.info("Partition = {}, Offset = {}, Key ={}, Value = {}",consumerRecord.partition(),consumerRecord.offset(), consumerRecord.key(), consumerRecord.value());
+		}
+
+		log.info("Bath complete");
+
+	}
+
 	// CONSUMO NORMAL DE MENSAJE
 //	@KafkaListener(topics = "TutorialTopic", groupId = "iciencia-group")
 //	public void listen(String message) {
 //		log.info("Mensaje Kafka {}", message);
 //	}
-
 	/**
 	 * El nombre container proviene desde el nombre de la clase de configuracion
+	 * Consumo por particiones
 	 * 
 	 * @param message
 	 */
-	@KafkaListener(topics = "TutorialTopic", containerFactory = "kafkaListenerContainerFactory", groupId = "iciencia-group", properties = {
-			"max.poll.interval.ms:4000", "max.poll.records:10" })
-	public void listen(List<String> message) {
-		log.info("Start reading messages");
-
-		for (String string : message) {
-			log.info("Mensaje leido = {}", string);
-		}
-
-		log.info("Batch complete");
-	}
+//	@KafkaListener(topics = "TutorialTopic", containerFactory = "kafkaListenerContainerFactory", groupId = "iciencia-group", properties = {
+//			"max.poll.interval.ms:4000", "max.poll.records:10" })
+//	public void listen(List<String> message) {
+//		log.info("Start reading messages");
+//
+//		for (String string : message) {
+//			log.info("Mensaje leido = {}", string);
+//		}
+//
+//		log.info("Batch complete");
+//	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(SpringBootKafkaApplication.class, args);
@@ -60,8 +75,8 @@ public class SpringBootKafkaApplication implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		for (int i = 0; i < 100; i++) {
 
-			ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send("TutorialTopic",
-					String.format(" SMS generado numer %d", i));
+			ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send("TutorialTopic",String.valueOf(i),
+					String.format(" SMS generado numero %d", i));
 			future.addCallback(new KafkaSendCallback<String, String>() {
 
 				@Override
