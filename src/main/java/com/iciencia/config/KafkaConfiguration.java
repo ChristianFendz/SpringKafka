@@ -41,6 +41,9 @@ public class KafkaConfiguration {
 		factory.setConsumerFactory(consumerFactory());
 		//Pemite recibir los mensajes en bash en grupo
 		factory.setBatchListener(true);
+		
+		// consumir mensajes de forma concurrente
+		factory.setConcurrency(3);
 		return factory;
 	}
 
